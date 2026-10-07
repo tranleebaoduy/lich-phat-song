@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tra Cứu & Quản Lý Lịch Phát Sóng</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; padding: 20px; line-height: 1.5; }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        header h1 { color: #38bdf8; font-size: 1.8rem; }
+        
+        .admin-controls { display: flex; gap: 10px; align-items: center; }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #0284c7; color: white; }
+        .btn-primary:hover { background: #0369a1; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-secondary { background: #475569; color: white; }
+        .btn-secondary:hover { background: #334155; }
+
+        .search-box { position: relative; margin-bottom: 20px; }
+        .search-box input {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1rem;
+            border-radius: 12px;
+            border: 2px solid #334155;
+            background-color: #1e293b;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-box input:focus { border-color: #38bdf8; }
+
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 8px 16px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .filter-btn.active, .filter-btn:hover { background: #0284c7; color: #fff; border-color: #0284c7; }
+
+        .schedule-list { display: flex; flex-direction: column; gap: 12px; }
+        .program-card {
+            background: #1e293b;
+            border-left: 4px solid #38bdf8;
+            padding: 16px 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+        .program-card.live { border-left-color: #ef4444; }
+
+        .time-channel { font-size: 0.85rem; color: #38bdf8; font-weight: 600; margin-bottom: 4px; }
+        .program-card.live .time-channel { color: #ef4444; }
+        .title { font-size: 1.1rem; font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
+        .category { font-size: 0.8rem; background: #334155; color: #cbd5e1; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+        
+        .badge-live {
+            background: #ef4444;
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+            margin-left: 8px;
+        }
+
+        .action-btns { display: flex; gap: 8px; }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            border: 1px solid #334155;
+        }
+        .modal-content h2 { margin-bottom: 15px; color: #38bdf8; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #cbd5e1; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #fff;
+            outline: none;
+        }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; }
+        .checkbox-group input { width: auto; }
+        
+        .no-result { text-align: center; color: #64748b; padding: 40px 0; }
+        .error-msg { color: #ef4444; font-size: 0.85rem; margin-top: 5px; display: none; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            .program-card { flex-direction: column; align-items: flex-start; }
+            .action-btns { width: 100%; justify-content: flex-end; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Lịch Phát Sóng Truyền Hình</h1>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Tra cứu & quản lý lịch chiếu dễ dàng</p>
+        </div>
+        <div class="admin-controls" id="authSection">
+            <!-- Nút đăng nhập / Bảng Admin sẽ cập nhật bằng JS -->
+        </div>
+    </header>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Nhập từ khóa tìm kiếm (Ví dụ: VTV1, Phim, 20:00, Bóng đá...)" oninput="filterSchedule()">
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active" onclick="filterCategory('all', this)">Tất cả</button>
+        <button class="filter-btn" onclick="filterCategory('Thời sự', this)">Thời sự</button>
+        <button class="filter-btn" onclick="filterCategory('Phim', this)">Phim truyện</button>
+        <button class="filter-btn" onclick="filterCategory('Thể thao', this)">Thể thao</button>
+        <button class="filter-btn" onclick="filterCategory('Giải trí', this)">Giải trí</button>
+    </div>
+
+    <div class="schedule-list" id="scheduleList"></div>
+</div>
+
+<!-- Modal Đăng Nhập -->
+<div class="modal" id="loginModal">
+    <div class="modal-content">
+        <h2>Đăng Nhập Admin</h2>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>Tên tài khoản</label>
+                <input type="text" id="loginUser" required placeholder="Nhập tài khoản">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="loginPass" required placeholder="Nhập mật khẩu">
+            </div>
+            <div class="error-msg" id="loginError">Tài khoản hoặc mật khẩu không chính xác!</div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('loginModal')">Hủy</button>
+                <button type="submit" class="btn btn-primary">Đăng Nhập</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Thêm / Sửa Chương Trình -->
+<div class="modal" id="programModal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Thêm Chương Trình</h2>
+        <form id="programForm" onsubmit="saveProgram(event)">
+            <input type="hidden" id="programId">
+            <div class="form-group">
+                <label>Khung giờ (VD: 19:00)</label>
+                <input type="text" id="progTime" required placeholder="19:00">
+            </div>
+            <div class="form-group">
+                <label>Kênh (VD: VTV1, HTV7...)</label>
+                <input type="text" id="progChannel" required placeholder="VTV1">
+            </div>
+            <div class="form-group">
+                <label>Tên chương trình</label>
+                <input type="text" id="progTitle" required placeholder="Tên chương trình...">
+            </div>
+            <div class="form-group">
+                <label>Thể loại</label>
+                <select id="progCategory">
+                    <option value="Thời sự">Thời sự</option>
+                    <option value="Phim">Phim</option>
+                    <option value="Thể thao">Thể thao</option>
+                    <option value="Giải trí">Giải trí</option>
+                    <option value="Khoa học">Khoa học</option>
+                </select>
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="progIsLive">
+                <label for="progIsLive" style="margin-bottom:0;">Đang phát sóng (LIVE)</label>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('programModal')">Hủy</button>
+                <button type="submit" class="btn btn-success">Lưu Thay Đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Tài khoản Admin cố định
+    const ADMIN_USER = "THoaTV";
+    const ADMIN_PASS = "THoaTV1!";
+
+    // Dữ liệu ban đầu mặc định
+    const defaultData = [
+        { id: 1, time: "06:00", channel: "VTV1", title: "Chào Buổi Sáng", category: "Thời sự", isLive: false },
+        { id: 2, time: "08:30", channel: "VTV3", title: "Cà Phê Sáng", category: "Giải trí", isLive: false },
+        { id: 3, time: "11:00", channel: "VTV2", title: "Thế Giới Động Vật", category: "Khoa học", isLive: false },
+        { id: 4, time: "12:00", channel: "VTV1", title: "Bản Tin Trưa", category: "Thời sự", isLive: false },
+        { id: 5, time: "14:00", channel: "VTV3", title: "Phim Truyện: Hương Vị Tình Thân", category: "Phim", isLive: false },
+        { id: 6, time: "19:00", channel: "VTV1", title: "Thời Sự 19h", category: "Thời sự", isLive: true },
+        { id: 7, time: "20:05", channel: "VTV3", title: "Trò Chơi Âm Nhạc", category: "Giải trí", isLive: false },
+        { id: 8, time: "22:15", channel: "VTV6", title: "Trực Tiếp Bóng Đá: Ngoại Hạng Anh", category: "Thể thao", isLive: false }
+    ];
+
+    // Khởi tạo trạng thái ứng dụng
+    let scheduleData = JSON.parse(localStorage.getItem('tv_schedule')) || defaultData;
+    let isAdmin = localStorage.getItem('is_admin') === 'true';
+    let currentCategory = 'all';
+
+    // Đánh dấu lưu localStorage
+    function saveData() {
+        localStorage.setItem('tv_schedule', JSON.stringify(scheduleData));
+    }
+
+    // Cập nhật giao diện thanh Quản trị
+    function renderAuthControls() {
+        const authSection = document.getElementById('authSection');
+        if (isAdmin) {
+            authSection.innerHTML = `
+                <button class="btn btn-success" onclick="openAddModal()">+ Thêm Chương Trình</button>
+                <button class="btn btn-secondary" onclick="handleLogout()">Đăng Xuất Admin</button>
+            `;
+        } else {
+            authSection.innerHTML = `
+                <button class="btn btn-primary" onclick="openModal('loginModal')">Đăng Nhập Admin</button>
+            `;
+        }
+    }
+
+    // Hiển thị danh sách lịch phát sóng
+    function renderSchedule(data) {
+        const listContainer = document.getElementById('scheduleList');
+        listContainer.innerHTML = '';
+
+        if (data.length === 0) {
+            listContainer.innerHTML = '<div class="no-result">Không tìm thấy chương trình phù hợp.</div>';
+            return;
+        }
+
+        data.forEach(item => {
+            const card = document.createElement('div');
+            card.className = `program-card ${item.isLive ? 'live' : ''}`;
+            
+            let adminActions = '';
+            if (isAdmin) {
+                adminActions = `
+                    <div class="action-btns">
+                        <button class="btn btn-primary" style="padding: 4px 10px; font-size:0.8rem;" onclick="openEditModal(${item.id})">Sửa</button>
+                        <button class="btn btn-danger" style="padding: 4px 10px; font-size:0.8rem;" onclick="deleteProgram(${item.id})">Xoá</button>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div class="time-channel">
+                        ${item.time} | Kênh: ${item.channel}
+                        ${item.isLive ? '<span class="badge-live">LIVE</span>' : ''}
+                    </div>
+                    <div class="title">${item.title}</div>
+                    <span class="category">${item.category}</span>
+                </div>
+                ${adminActions}
+            `;
+            listContainer.appendChild(card);
+        });
+    }
+
+    // Lọc & Tìm kiếm
+    function filterSchedule() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        
+        const filtered = scheduleData.filter(item => {
+            const matchCategory = currentCategory === 'all' || item.category === currentCategory;
+            const matchQuery = 
+                item.title.toLowerCase().includes(query) ||
+                item.channel.toLowerCase().includes(query) ||
+                item.time.toLowerCase().includes(query) ||
+                item.category.toLowerCase().includes(query);
+
+            return matchCategory && matchQuery;
+        });
+
+        renderSchedule(filtered);
+    }
+
+    function filterCategory(category, element) {
+        currentCategory = category;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+        filterSchedule();
+    }
+
+    // Xử lý Đăng Nhập / Đăng Xuất
+    function handleLogin(e) {
+        e.preventDefault();
+        const user = document.getElementById('loginUser').value;
+        const pass = document.getElementById('loginPass').value;
+
+        if (user === ADMIN_USER && pass === ADMIN_PASS) {
+            isAdmin = true;
+            localStorage.setItem('is_admin', 'true');
+            closeModal('loginModal');
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').style.display = 'none';
+            renderAuthControls();
+            filterSchedule();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function handleLogout() {
+        isAdmin = false;
+        localStorage.removeItem('is_admin');
+        renderAuthControls();
+        filterSchedule();
+    }
+
+    // Xử lý Thêm / Sửa / Xoá
+    function openAddModal() {
+        document.getElementById('modalTitle').innerText = "Thêm Chương Trình";
+        document.getElementById('programForm').reset();
+        document.getElementById('programId').value = '';
+        openModal('programModal');
+    }
+
+    function openEditModal(id) {
+        const item = scheduleData.find(prog => prog.id === id);
+        if (!item) return;
+
+        document.getElementById('modalTitle').innerText = "Chỉnh Sửa Chương Trình";
+        document.getElementById('programId').value = item.id;
+        document.getElementById('progTime').value = item.time;
+        document.getElementById('progChannel').value = item.channel;
+        document.getElementById('progTitle').value = item.title;
+        document.getElementById('progCategory').value = item.category;
+        document.getElementById('progIsLive').checked = item.isLive;
+
+        openModal('programModal');
+    }
+
+    function saveProgram(e) {
+        e.preventDefault();
+        const id = document.getElementById('programId').value;
+        const time = document.getElementById('progTime').value;
+        const channel = document.getElementById('progChannel').value;
+        const title = document.getElementById('progTitle').value;
+        const category = document.getElementById('progCategory').value;
+        const isLive = document.getElementById('progIsLive').checked;
+
+        if (id) {
+            // Cập nhật chương trình đã có
+            const index = scheduleData.findIndex(prog => prog.id == id);
+            if (index !== -1) {
+                scheduleData[index] = { id: Number(id), time, channel, title, category, isLive };
+            }
+        } else {
+            // Thêm chương trình mới
+            const newId = scheduleData.length > 0 ? Math.max(...scheduleData.map(p => p.id)) + 1 : 1;
+            scheduleData.push({ id: newId, time, channel, title, category, isLive });
+        }
+
+        saveData();
+        closeModal('programModal');
+        filterSchedule();
+    }
+
+    function deleteProgram(id) {
+        if (confirm("Bạn có chắc chắn muốn xoá chương trình này?")) {
+            scheduleData = scheduleData.filter(prog => prog.id !== id);
+            saveData();
+            filterSchedule();
+        }
+    }
+
+    // Điều khiển Modal
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Khởi tạo ứng dụng
+    renderAuthControls();
+    filterSchedule();
+</script>
+
+</body>
+</html>
